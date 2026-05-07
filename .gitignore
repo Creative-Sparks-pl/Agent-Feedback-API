@@ -1,0 +1,33 @@
+# Workflow state
+projects/
+scratch/
+.planning/
+tests/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Node / TypeScript
+node_modules/
+dist/
+build/
+*.log
+.wrangler/
+.vercel/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Claude / IDE
+.claude/
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+desktop.ini
