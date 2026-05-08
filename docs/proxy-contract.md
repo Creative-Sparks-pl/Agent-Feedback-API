@@ -51,32 +51,32 @@ Method gate: any HTTP method other than `POST` returns 405.
 
 ## Server-side environment variables
 
-The proxy reads these four values from `process.env` at request time. None of them ship in any agent bundle.
+The proxy reads these three required values from `process.env` at request time. None of them ship in any agent bundle.
 
 ```
-FEATUREBASE_API_KEY        # Bearer token used to call Featurebase
-FEATUREBASE_BOARD_ID       # ObjectId of the operator's single board
-FEATUREBASE_FIELD_TYPE_ID  # ObjectId of the custom field "Type"
-FEEDBACK_BUNDLE_TOKEN      # Static shared token; matched against incoming Authorization header
+FEATUREBASE_API_KEY    # Bearer token used to call Featurebase
+FEATUREBASE_BOARD_ID   # ObjectId of the operator's single board
+FEEDBACK_BUNDLE_TOKEN  # Static shared token; matched against incoming Authorization header
 ```
+
+Optional: `FEATUREBASE_PORTAL_URL` — when set, the proxy builds full post URLs from the Featurebase response slug; when unset, it returns whatever URL/slug Featurebase supplies directly.
 
 ---
 
 ## Outbound to Featurebase
 
-The proxy maps the agent's slim payload to the full Featurebase payload:
+The proxy maps the agent's slim payload to the Featurebase payload, **prepending the agent's `type` to the title** (`[Bug] `, `[Feature request] `, `[Feedback] `):
 
 ```json
 {
-  "title": "<from agent>",
+  "title": "[<type>] <from agent>",
   "content": "<from agent>",
   "boardId": "<env FEATUREBASE_BOARD_ID>",
-  "customFields": {
-    "<env FEATUREBASE_FIELD_TYPE_ID>": "<agent's type>"
-  },
   "author": { "email": "<from agent or omitted>" }
 }
 ```
+
+**Why title prefix and not `customFields`?** Featurebase's Free plan paywalls all custom fields, and tag creation is limited to two predefined priority labels that cannot be renamed. Title prefix is the only category-encoding mechanism available without paying. The operator filters by typing `[Bug]`, `[Feature request]`, or `[Feedback]` into Featurebase's dashboard search. If the operator later upgrades, only the proxy's `lib/map-outbound.ts` changes — the agent contract stays identical.
 
 If `email` from the agent is `null`, the `author` key is omitted entirely (do not pass `author: { email: null }`).
 

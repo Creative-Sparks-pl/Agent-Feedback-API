@@ -9,9 +9,10 @@ Day-to-day operations for the Agent-Feedback-API proxy: provisioning, smoke test
 Before the proxy can land posts in Featurebase, the operator's Featurebase account needs to be set up:
 
 1. **Board exists.** A single board where every recipient's feedback lands. Note its ObjectId — that's `FEATUREBASE_BOARD_ID`.
-2. **Custom field "Type" exists.** Type `select`. Three values exactly: `Bug`, `Feature request`, `Feedback`. Note the field's ObjectId — that's `FEATUREBASE_FIELD_TYPE_ID`.
-3. **API key created.** Generate from Featurebase Settings → API. That's `FEATUREBASE_API_KEY`. Treat as a high-stakes secret — never commit, never log.
-4. **(Optional) Portal URL.** If the board is published as a public portal, note the URL (e.g. `https://feedback.<operator>.featurebase.app`). That's `FEATUREBASE_PORTAL_URL`. The proxy uses this to construct full `post_url` values from Featurebase's slug; without it the proxy returns the slug directly.
+2. **API key created.** Generate from Featurebase Settings → API. That's `FEATUREBASE_API_KEY`. Treat as a high-stakes secret — never commit, never log.
+3. **(Optional) Portal URL.** If the board is published as a public portal, note the URL (e.g. `https://feedback.<operator>.featurebase.app`). That's `FEATUREBASE_PORTAL_URL`. The proxy uses this to construct full `post_url` values from Featurebase's slug; without it the proxy returns the slug directly.
+
+> **Note on category encoding (FIN-007).** The proxy encodes the agent's `type` (Bug / Feature request / Feedback) as a **title prefix** (e.g. `[Bug] Original title`) rather than a Featurebase custom field. Reason: custom fields are paywalled on Featurebase Free, and the Free plan's two pre-named priority tags can't be renamed for category use. Filter posts by category by typing `[Bug]`, `[Feature request]`, or `[Feedback]` into the Featurebase dashboard search. If you later upgrade and want labelled-row category rendering, only `lib/map-outbound.ts` changes.
 
 ---
 
@@ -19,10 +20,9 @@ Before the proxy can land posts in Featurebase, the operator's Featurebase accou
 
 1. **Create the project.** Vercel dashboard → Add New → Project → import the GitHub repo for `Agent-Feedback-API`.
 2. **Confirm framework preset.** Vercel should auto-detect "Other" — leave the build command empty (the function is built by Vercel's TypeScript runtime).
-3. **Set environment variables.** Vercel project Settings → Environment Variables. Add the four required keys for both `Production` and `Preview`:
+3. **Set environment variables.** Vercel project Settings → Environment Variables. Add the three required keys for both `Production` and `Preview`:
    - `FEATUREBASE_API_KEY`
    - `FEATUREBASE_BOARD_ID`
-   - `FEATUREBASE_FIELD_TYPE_ID`
    - `FEEDBACK_BUNDLE_TOKEN`
    
    Optional: also add `FEATUREBASE_PORTAL_URL` if you want full post URLs in responses.

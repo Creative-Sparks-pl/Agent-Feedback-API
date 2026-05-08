@@ -99,8 +99,7 @@ export default async function handler(
     // Required Featurebase env vars — fail fast if any missing.
     const apiKey = process.env.FEATUREBASE_API_KEY;
     const boardId = process.env.FEATUREBASE_BOARD_ID;
-    const fieldTypeId = process.env.FEATUREBASE_FIELD_TYPE_ID;
-    if (!apiKey || !boardId || !fieldTypeId) {
+    if (!apiKey || !boardId) {
       console.error("[feedback] internal_error message=missing_env");
       failure(res, 500, "internal_error", "Server is misconfigured.");
       return;
@@ -110,7 +109,7 @@ export default async function handler(
     const portalUrl = process.env.FEATUREBASE_PORTAL_URL;
 
     // Build outbound and POST.
-    const outbound = toFeaturebasePayload(result, { boardId, fieldTypeId });
+    const outbound = toFeaturebasePayload(result, { boardId });
     const upstream = await fetch(FEATUREBASE_POSTS_URL, {
       method: "POST",
       headers: {
