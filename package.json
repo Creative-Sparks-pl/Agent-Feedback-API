@@ -1,0 +1,21 @@
+{
+  "name": "agent-feedback-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Operator-hosted proxy that forwards agent feedback submissions to Featurebase",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/transformation/*.test.ts"
+  },
+  "dependencies": {
+    "@vercel/node": "^5.7.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0",
+    "vercel": "^41.0.0"
+  }
+}

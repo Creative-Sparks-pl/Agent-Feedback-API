@@ -2,7 +2,7 @@
 projects/
 scratch/
 .planning/
-tests/
+.wm-doc-graph.yaml
 
 # Secrets
 .env

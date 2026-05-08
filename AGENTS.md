@@ -24,15 +24,30 @@ Rules are scoped by activity in `~/.claude/rules/`:
 
 ```
 Agent-Feedback-API/
-├── AGENTS.md                  # This file
+├── AGENTS.md                       # This file
 ├── .gitignore
-├── docs/                      # Design notes, contract reference
-├── scratch/                   # Throwaway exploration (gitignored)
-├── projects/                  # Workflow state (gitignored except ACTIVE.md if desired)
-└── (TBD during execution)     # Source code layout decided in discovery — depends on hosting platform
+├── package.json                    # npm metadata + scripts (dev, typecheck, test)
+├── tsconfig.json                   # TypeScript config (strict, NodeNext, no-emit)
+├── vercel.json                     # Vercel function config (maxDuration, memory)
+├── .env.example                    # Documented env-var keys (no values)
+├── api/
+│   └── feedback.ts                 # Single Vercel Node Serverless handler
+├── lib/
+│   ├── validate.ts                 # Pure request validator
+│   └── map-outbound.ts             # Pure agent-payload → Featurebase-payload mapper
+├── tests/
+│   └── transformation/
+│       ├── validate.test.ts        # Unit tests for validator
+│       └── map-outbound.test.ts    # Unit tests for outbound mapper
+├── docs/
+│   ├── prd-agent-feedback-api.md   # Product requirements
+│   ├── proxy-contract.md           # Mirror of upstream §10 contract
+│   └── operations.md               # Deploy + smoke-test + rotation runbook
+├── scratch/                        # Throwaway exploration (gitignored)
+└── projects/                       # Workflow state (gitignored except ACTIVE.md if desired)
 ```
 
-The source code layout (e.g., `src/`, `worker/`, `api/`) is locked during discovery based on the chosen hosting platform.
+Layout follows Vercel's Node.js Serverless Function convention: handler at `api/feedback.ts`, pure helpers under `lib/`, tests under `tests/`. Source code uses TypeScript exclusively. No web framework — handler talks directly to `@vercel/node` types and built-in `fetch`.
 
 ---
 
