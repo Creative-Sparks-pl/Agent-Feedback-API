@@ -114,14 +114,18 @@ Run this `curl` against the live URL with a real-but-disposable test payload. Re
 ```bash
 curl -i -X POST '<PROXY_URL>/api/feedback' \
   -H 'Authorization: Bearer <BUNDLE_TOKEN>' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "type": "Feedback",
-    "title": "Smoke test — please ignore",
-    "content": "<p>This Discussion was created by the deploy smoke test.</p>",
-    "email": null
-  }'
+  -H 'Content-Type: application/json; charset=utf-8' \
+  --data-binary @- <<'JSON'
+{
+  "type": "Feedback",
+  "title": "Smoke test - please ignore",
+  "content": "<p>This Discussion was created by the deploy smoke test.</p>",
+  "email": null
+}
+JSON
 ```
+
+> **Windows shell warning.** Avoid passing non-ASCII characters (em-dash, accented letters, Polish characters, CJK) directly in a `curl -d 'string'` payload from Windows-native shells (Git Bash, PowerShell). The shell may down-encode UTF-8 to a single-byte codepage and the receiving server will see mangled bytes. Use `--data-binary @-` with a heredoc as above, or send from Node / Python / Postman where UTF-8 handling is explicit. The agent itself runs in Node and is unaffected.
 
 **Expected:**
 - HTTP status `201`.
