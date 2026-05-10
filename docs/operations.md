@@ -178,10 +178,13 @@ PAT rotation does NOT require a new agent bundle — the PAT only lives on the p
 
 | Field | Value |
 |---|---|
-| Production URL | _(filled in by Step 10 — first deploy)_ |
-| Last bundle-token rotation date | _(filled in after first deploy or first rotation)_ |
-| Last GitHub PAT rotation date | _(filled in after first deploy or first rotation)_ |
-| Feedback repo | `Creative-Sparks-pl/feedback` (or operator's chosen path) |
+| Production URL | `https://agent-feedback-api.vercel.app` |
+| Per-deployment URL pattern | `agent-feedback-<hash>-tmaciag-7741s-projects.vercel.app` |
+| Last bundle-token rotation date | 2026-05-10 (initial generation) |
+| Last GitHub PAT rotation date | 2026-05-10 (initial generation; expires 2027-05-11) |
+| Feedback repo | `Creative-Sparks-pl/feedback` |
+| Discussion portal | `https://github.com/Creative-Sparks-pl/feedback/discussions` |
+| First successful smoke test | 2026-05-10 — discussion #1 created end-to-end |
 | Notes | |
 
 ---
