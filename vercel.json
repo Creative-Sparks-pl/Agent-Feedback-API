@@ -1,4 +1,5 @@
 {
+  "buildCommand": "",
   "functions": {
     "api/feedback.ts": {
       "maxDuration": 10,
