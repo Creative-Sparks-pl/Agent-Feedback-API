@@ -3,11 +3,13 @@
 ## Project Identity
 
 **Project:** Agent-Feedback-API
-**Purpose:** Thin operator-hosted proxy service that forwards feedback submissions from `ux-designer` (and future Markdown-Agents) to Featurebase, holding the Featurebase API key server-side so it never ships in agent bundles.
+**Purpose:** Thin operator-hosted proxy service that forwards feedback submissions from `ux-designer` (and future Markdown-Agents) to **GitHub Discussions** in the operator's feedback repo, holding the GitHub PAT server-side so it never ships in agent bundles.
 
-**Why this exists.** Agents are distributed as bundles to recipient developers. If the agent called Featurebase directly, every recipient bundle would carry the Featurebase API key — exposing the operator's full account (including read access to other recipients' submissions). The proxy isolates the secret server-side; the agent only carries a low-stakes bundle token.
+**Why this exists.** Agents are distributed as bundles to recipient developers. If the agent called the destination platform directly, every recipient bundle would carry the operator's API token — exposing the operator's account. The proxy isolates the secret server-side; the agent only carries a low-stakes bundle token.
 
-**Upstream contract owner.** The proxy's request/response shape and behavioral contract are owned by the upstream agent project at `d:\Dev\Markdown-Agents\agents\ux-designer\projects\2026-05-07-feedback-intake-workflow\`. Do not change the contract here — change it there first, then mirror.
+**Why GitHub Discussions** (FIN-008). Featurebase Free plan paywalls API access entirely (Professional plan required), discovered post-execution. GitHub Discussions is a free-API match: GraphQL `createDiscussion` mutation works on free public repos, three Discussion categories (Bug reports, Feature requests, Feedback) replace Featurebase's customFields/tags encoding, public portal at `github.com/<org>/feedback/discussions`, comments + emoji reactions built in. Trade-off: developer-aesthetic UI vs. consumer-feedback portal — fits the agent's recipient base.
+
+**Upstream contract owner.** The proxy's *request shape from the agent* is owned by the upstream agent project at `d:\Dev\Markdown-Agents\agents\ux-designer\projects\2026-05-07-feedback-intake-workflow\`. The agent's slim payload (`{ type, title, content, email }`) is platform-agnostic — the platform pivot from Featurebase to GitHub Discussions did not change it. Do not change the agent-facing request shape here — change it upstream first, then mirror. The proxy's *outbound* (now GitHub Discussions GraphQL) is owned in this repo and tracked by FIN-008.
 
 ## Agent Rules
 
@@ -55,13 +57,13 @@ Layout follows Vercel's Node.js Serverless Function convention: handler at `api/
 
 The following files outrank generated options when discovery reaches alternatives (per `~/.claude/rules/discovery-rules.md` rule 9):
 
-- `docs/proxy-contract.md` (TBD — to be authored from upstream design doc §10 verbatim) — the externally-facing API contract; do not change here without changing upstream first.
-- `d:\Dev\Markdown-Agents\agents\ux-designer\projects\2026-05-07-feedback-intake-workflow\plans\2026-05-07-feedback-intake-design.md` (read-only reference) — upstream design doc, source of truth for the proxy contract.
+- `docs/proxy-contract.md` — the externally-facing API contract: agent's request shape, the proxy's response shape, and the GitHub Discussions outbound mapping. Agent-facing fields are owned upstream (do not change here without changing upstream first); outbound mapping is owned here and tracked by FIN-008.
+- `d:\Dev\Markdown-Agents\agents\ux-designer\projects\2026-05-07-feedback-intake-workflow\plans\2026-05-07-feedback-intake-design.md` (read-only reference) — upstream design doc, source of truth for the agent-facing payload.
 
 ## Scope Boundary
 
 This repo holds proxy code, deploy config, tests, and docs. It does NOT hold:
-- Featurebase API keys or any other secret values (those live in the deploy platform's secret store)
+- GitHub PATs or any other secret values (those live in the Vercel project's env-var store)
 - Agent code (lives in `Markdown-Agents/agents/ux-designer/`)
 - Bundle tokens beyond placeholder examples in docs
 

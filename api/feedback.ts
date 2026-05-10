@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createHash } from "node:crypto";
 import { validate, isValidationFailure } from "../lib/validate.js";
-import { toFeaturebasePayload } from "../lib/map-outbound.js";
+import { toGraphQLRequest } from "../lib/map-outbound.js";
 
-const FEATUREBASE_POSTS_URL = "https://do.featurebase.app/v2/posts";
+const GITHUB_GRAPHQL_URL = "https://api.github.com/graphql";
 
 interface FailureBody {
   ok: false;
@@ -43,33 +43,45 @@ function tokenHash(authHeader: string | string[] | undefined): string {
   return createHash("sha256").update(token).digest("hex").slice(0, 8);
 }
 
-function extractPostUrl(featurebaseResponse: unknown, portalUrl: string | undefined): string {
-  // Try common shapes Featurebase may return; fall back to the slug-only string.
-  if (typeof featurebaseResponse !== "object" || featurebaseResponse === null) {
-    return "";
+interface GraphQLDiscussionResponse {
+  data?: {
+    createDiscussion?: {
+      discussion?: {
+        id?: string;
+        url?: string;
+        number?: number;
+      };
+    };
+  };
+  errors?: Array<{ message?: string; type?: string }>;
+}
+
+function extractDiscussionUrl(graphqlBody: unknown): {
+  url: string | null;
+  errorMessage: string | null;
+} {
+  if (typeof graphqlBody !== "object" || graphqlBody === null) {
+    return { url: null, errorMessage: "GitHub response was not a JSON object." };
   }
-  const r = featurebaseResponse as Record<string, unknown>;
+  const r = graphqlBody as GraphQLDiscussionResponse;
 
-  // 1. Direct url field on the response
-  if (typeof r.url === "string") return r.url;
-
-  // 2. submission.url or submission.slug
-  const submission = (r.submission ?? r.post) as Record<string, unknown> | undefined;
-  if (submission && typeof submission === "object") {
-    if (typeof submission.url === "string") return submission.url;
-    if (typeof submission.slug === "string") {
-      return portalUrl
-        ? `${portalUrl.replace(/\/$/, "")}/p/${submission.slug}`
-        : submission.slug;
-    }
+  if (Array.isArray(r.errors) && r.errors.length > 0) {
+    const first = r.errors[0];
+    return {
+      url: null,
+      errorMessage: `GitHub GraphQL error: ${first?.message ?? "unknown"}.`,
+    };
   }
 
-  // 3. top-level slug
-  if (typeof r.slug === "string") {
-    return portalUrl ? `${portalUrl.replace(/\/$/, "")}/p/${r.slug}` : r.slug;
+  const url = r.data?.createDiscussion?.discussion?.url;
+  if (typeof url === "string" && url.length > 0) {
+    return { url, errorMessage: null };
   }
 
-  return "";
+  return {
+    url: null,
+    errorMessage: "GitHub response did not contain a discussion URL.",
+  };
 }
 
 export default async function handler(
@@ -96,25 +108,38 @@ export default async function handler(
       return;
     }
 
-    // Required Featurebase env vars — fail fast if any missing.
-    const apiKey = process.env.FEATUREBASE_API_KEY;
-    const boardId = process.env.FEATUREBASE_BOARD_ID;
-    if (!apiKey || !boardId) {
+    // Required GitHub env vars — fail fast if any missing.
+    const githubToken = process.env.GITHUB_TOKEN;
+    const repoId = process.env.GITHUB_REPO_ID;
+    const categoryIdBug = process.env.GITHUB_CAT_BUG_ID;
+    const categoryIdFeature = process.env.GITHUB_CAT_FEATURE_ID;
+    const categoryIdFeedback = process.env.GITHUB_CAT_FEEDBACK_ID;
+    if (
+      !githubToken ||
+      !repoId ||
+      !categoryIdBug ||
+      !categoryIdFeature ||
+      !categoryIdFeedback
+    ) {
       console.error("[feedback] internal_error message=missing_env");
       failure(res, 500, "internal_error", "Server is misconfigured.");
       return;
     }
 
-    // Optional portal URL — used to construct full post_url from FB slug.
-    const portalUrl = process.env.FEATUREBASE_PORTAL_URL;
-
-    // Build outbound and POST.
-    const outbound = toFeaturebasePayload(result, { boardId });
-    const upstream = await fetch(FEATUREBASE_POSTS_URL, {
+    // Build outbound GraphQL request and POST.
+    const outbound = toGraphQLRequest(result, {
+      repoId,
+      categoryIdBug,
+      categoryIdFeature,
+      categoryIdFeedback,
+    });
+    const upstream = await fetch(GITHUB_GRAPHQL_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${githubToken}`,
         "Content-Type": "application/json",
+        Accept: "application/json",
+        "User-Agent": "agent-feedback-api",
       },
       body: JSON.stringify(outbound),
     });
@@ -127,15 +152,29 @@ export default async function handler(
         res,
         502,
         "featurebase_error",
-        `Featurebase returned ${upstream.status}.`
+        `GitHub GraphQL returned ${upstream.status}.`
       );
       return;
     }
 
-    const featurebaseBody = await upstream.json().catch(() => null);
-    const post_url = extractPostUrl(featurebaseBody, portalUrl);
-    console.log(`[feedback] ok status=201 post_url=${post_url}`);
-    success(res, post_url);
+    const githubBody = await upstream.json().catch(() => null);
+    const { url, errorMessage } = extractDiscussionUrl(githubBody);
+
+    if (!url) {
+      console.error(
+        `[feedback] featurebase_error upstream_status=200_with_errors`
+      );
+      failure(
+        res,
+        502,
+        "featurebase_error",
+        errorMessage ?? "GitHub did not return a discussion URL."
+      );
+      return;
+    }
+
+    console.log(`[feedback] ok status=201 post_url=${url}`);
+    success(res, url);
   } catch (err) {
     // Never leak err.message contents to the client; log a generic line locally.
     console.error("[feedback] internal_error message=unexpected_exception");

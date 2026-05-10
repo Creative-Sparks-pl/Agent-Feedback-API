@@ -1,10 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toFeaturebasePayload } from "../../lib/map-outbound.js";
+import {
+  toGraphQLRequest,
+  CREATE_DISCUSSION_MUTATION,
+} from "../../lib/map-outbound.js";
 import type { ValidatedBody } from "../../lib/validate.js";
 
 const ENV = {
-  boardId: "BOARD_OBJECT_ID_12345",
+  repoId: "REPO_GLOBAL_ID_12345",
+  categoryIdBug: "CAT_BUG_ID",
+  categoryIdFeature: "CAT_FEATURE_ID",
+  categoryIdFeedback: "CAT_FEEDBACK_ID",
 };
 
 function bodyOf(overrides: Partial<ValidatedBody> = {}): ValidatedBody {
@@ -17,59 +23,83 @@ function bodyOf(overrides: Partial<ValidatedBody> = {}): ValidatedBody {
   };
 }
 
-test("boardId from env appears in the payload", () => {
-  const payload = toFeaturebasePayload(bodyOf(), ENV);
-  assert.equal(payload.boardId, ENV.boardId);
+test("request carries the createDiscussion mutation query", () => {
+  const req = toGraphQLRequest(bodyOf(), ENV);
+  assert.equal(req.query, CREATE_DISCUSSION_MUTATION);
+  assert.ok(
+    req.query.includes("createDiscussion"),
+    "mutation must call createDiscussion"
+  );
 });
 
-test("type Bug prefixes the title with [Bug]", () => {
-  const payload = toFeaturebasePayload(
-    bodyOf({ type: "Bug", title: "Original title" }),
+test("repositoryId from env appears in the input", () => {
+  const req = toGraphQLRequest(bodyOf(), ENV);
+  assert.equal(req.variables.input.repositoryId, ENV.repoId);
+});
+
+test("type Bug routes to categoryIdBug", () => {
+  const req = toGraphQLRequest(bodyOf({ type: "Bug" }), ENV);
+  assert.equal(req.variables.input.categoryId, ENV.categoryIdBug);
+});
+
+test("type Feature request routes to categoryIdFeature", () => {
+  const req = toGraphQLRequest(bodyOf({ type: "Feature request" }), ENV);
+  assert.equal(req.variables.input.categoryId, ENV.categoryIdFeature);
+});
+
+test("type Feedback routes to categoryIdFeedback", () => {
+  const req = toGraphQLRequest(bodyOf({ type: "Feedback" }), ENV);
+  assert.equal(req.variables.input.categoryId, ENV.categoryIdFeedback);
+});
+
+test("title passes through verbatim (no prefix — categories handle structure now)", () => {
+  const req = toGraphQLRequest(
+    bodyOf({ title: "Original title with no prefix" }),
     ENV
   );
-  assert.equal(payload.title, "[Bug] Original title");
+  assert.equal(req.variables.input.title, "Original title with no prefix");
 });
 
-test("type Feature request prefixes the title with [Feature request]", () => {
-  const payload = toFeaturebasePayload(
-    bodyOf({ type: "Feature request", title: "Original title" }),
+test("content appears at the top of the discussion body", () => {
+  const req = toGraphQLRequest(
+    bodyOf({ content: "<p>Specific content body.</p>" }),
     ENV
   );
-  assert.equal(payload.title, "[Feature request] Original title");
-});
-
-test("type Feedback prefixes the title with [Feedback]", () => {
-  const payload = toFeaturebasePayload(
-    bodyOf({ type: "Feedback", title: "Original title" }),
-    ENV
+  assert.ok(
+    req.variables.input.body.startsWith("<p>Specific content body.</p>"),
+    "content must lead the discussion body"
   );
-  assert.equal(payload.title, "[Feedback] Original title");
 });
 
-test("content passes through verbatim", () => {
-  const body = bodyOf({ content: "<p>Specific content body.</p>" });
-  const payload = toFeaturebasePayload(body, ENV);
-  assert.equal(payload.content, "<p>Specific content body.</p>");
-});
-
-test("non-null email becomes author.email", () => {
-  const payload = toFeaturebasePayload(
+test("non-null email appears in the body trailer (Discussions has no author.email field)", () => {
+  const req = toGraphQLRequest(
     bodyOf({ email: "user@example.com" }),
     ENV
   );
-  assert.deepEqual(payload.author, { email: "user@example.com" });
-});
-
-test("null email omits the author key entirely (not author: { email: null })", () => {
-  const payload = toFeaturebasePayload(bodyOf({ email: null }), ENV);
-  assert.strictEqual(payload.author, undefined);
-  assert.ok(!("author" in payload));
-});
-
-test("payload has no customFields key (FIN-007 — drop custom-field encoding)", () => {
-  const payload = toFeaturebasePayload(bodyOf(), ENV);
   assert.ok(
-    !("customFields" in payload),
-    "customFields must not appear on the Free-plan payload"
+    req.variables.input.body.includes("user@example.com"),
+    "email must be embedded in discussion body for the operator to see"
   );
+  assert.ok(
+    req.variables.input.body.includes("Reply-to"),
+    "trailer should include Reply-to label"
+  );
+});
+
+test("null email yields an anonymous trailer (no email leaked)", () => {
+  const req = toGraphQLRequest(bodyOf({ email: null }), ENV);
+  assert.ok(
+    !req.variables.input.body.includes("@"),
+    "null email must not leak any address-shaped string"
+  );
+  assert.ok(
+    req.variables.input.body.includes("anonymously"),
+    "trailer should mark anonymous submissions"
+  );
+});
+
+test("payload has no Featurebase-era keys (FIN-008 — platform pivot)", () => {
+  const req = toGraphQLRequest(bodyOf(), ENV) as unknown as Record<string, unknown>;
+  assert.ok(!("boardId" in req), "no boardId at top level");
+  assert.ok(!("customFields" in req), "no customFields at top level");
 });
