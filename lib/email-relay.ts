@@ -27,10 +27,11 @@ export function toEmailRelayPayload(
 ): EmailRelayPayload | null {
   if (body.email === null) return null;
 
-  const subject = `[Feedback] [${body.type}] ${body.title}`;
+  const subject = `[UXD Feedback] [${body.type}] ${body.title}`;
 
   // Tiny HTML escape — body.title and body.email come from validated user
-  // input; the rest of the body is operator-controlled string literals.
+  // input. body.content is already HTML (the agent ships HTML deliberately,
+  // see helper §Drafting rules), so we pass it through verbatim.
   const esc = (s: string) =>
     s
       .replace(/&/g, "&amp;")
@@ -45,6 +46,9 @@ export function toEmailRelayPayload(
     `<strong>Reply-to:</strong> ${esc(body.email)}<br>`,
     `<strong>Discussion #${discussion.number}:</strong> <a href="${discussion.url}">${discussion.url}</a>`,
     `</p>`,
+    `<hr>`,
+    `<div>${body.content}</div>`,
+    `<hr>`,
     `<p><em>Reply directly to this email — Gmail's Reply will land in the user's inbox.</em></p>`,
   ].join("\n");
 

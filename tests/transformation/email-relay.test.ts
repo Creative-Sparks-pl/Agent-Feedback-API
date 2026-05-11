@@ -74,3 +74,20 @@ test("body includes the discussion number", () => {
   const payload = toEmailRelayPayload(bodyOf(), DISCUSSION);
   assert.ok(payload?.body.includes("#42"));
 });
+
+test("body includes the full submission content (not just a link)", () => {
+  const payload = toEmailRelayPayload(
+    bodyOf({
+      content: "<p>Specific HTML content the user wrote</p><p>With multiple paragraphs</p>",
+    }),
+    DISCUSSION
+  );
+  assert.ok(
+    payload?.body.includes("Specific HTML content the user wrote"),
+    "operator should read the full submission in the email without clicking through"
+  );
+  assert.ok(
+    payload?.body.includes("With multiple paragraphs"),
+    "all paragraphs from the agent's content should appear in the email body"
+  );
+});

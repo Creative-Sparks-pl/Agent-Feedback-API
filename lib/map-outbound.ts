@@ -61,6 +61,12 @@ function buildDiscussionBody(body: ValidatedBody): string {
   return body.content + trailer;
 }
 
+// Agent-identifier prefix prepended to every Discussion title. Helps the
+// operator visually scan the feedback repo when multiple agents (future)
+// route feedback through the same repo. For now, only `ux-designer`
+// (abbreviated UXD) writes to this proxy, so the prefix is hardcoded.
+const TITLE_PREFIX = "[UXD Feedback]";
+
 export function toGraphQLRequest(
   body: ValidatedBody,
   env: OutboundEnv
@@ -71,7 +77,7 @@ export function toGraphQLRequest(
       input: {
         repositoryId: env.repoId,
         categoryId: categoryIdForType(body.type, env),
-        title: body.title,
+        title: `${TITLE_PREFIX} ${body.title}`,
         body: buildDiscussionBody(body),
       },
     },

@@ -52,12 +52,12 @@ test("type Feedback routes to categoryIdFeedback", () => {
   assert.equal(req.variables.input.categoryId, ENV.categoryIdFeedback);
 });
 
-test("title passes through verbatim (no prefix — categories handle structure now)", () => {
+test("title is prefixed with [UXD Feedback] for operator scannability", () => {
   const req = toGraphQLRequest(
     bodyOf({ title: "Original title with no prefix" }),
     ENV
   );
-  assert.equal(req.variables.input.title, "Original title with no prefix");
+  assert.equal(req.variables.input.title, "[UXD Feedback] Original title with no prefix");
 });
 
 test("content appears at the top of the discussion body", () => {
