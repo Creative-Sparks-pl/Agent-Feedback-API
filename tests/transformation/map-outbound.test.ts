@@ -71,18 +71,18 @@ test("content appears at the top of the discussion body", () => {
   );
 });
 
-test("non-null email appears in the body trailer (Discussions has no author.email field)", () => {
+test("non-null email does NOT leak into the public discussion body (email-relay handles it privately)", () => {
   const req = toGraphQLRequest(
     bodyOf({ email: "user@example.com" }),
     ENV
   );
   assert.ok(
-    req.variables.input.body.includes("user@example.com"),
-    "email must be embedded in discussion body for the operator to see"
+    !req.variables.input.body.includes("user@example.com"),
+    "email address must not appear in the public Discussion body — it goes via the Make webhook relay"
   );
   assert.ok(
-    req.variables.input.body.includes("Reply-to"),
-    "trailer should include Reply-to label"
+    req.variables.input.body.includes("reply-to address was provided"),
+    "trailer should indicate a reply-to is available without disclosing it"
   );
 });
 

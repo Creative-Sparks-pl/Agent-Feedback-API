@@ -2,8 +2,10 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createHash } from "node:crypto";
 import { validate, isValidationFailure } from "../lib/validate.js";
 import { toGraphQLRequest } from "../lib/map-outbound.js";
+import { toEmailRelayPayload } from "../lib/email-relay.js";
 
 const GITHUB_GRAPHQL_URL = "https://api.github.com/graphql";
+const EMAIL_RELAY_TIMEOUT_MS = 5000;
 
 interface FailureBody {
   ok: false;
@@ -56,12 +58,13 @@ interface GraphQLDiscussionResponse {
   errors?: Array<{ message?: string; type?: string }>;
 }
 
-function extractDiscussionUrl(graphqlBody: unknown): {
+function extractDiscussion(graphqlBody: unknown): {
   url: string | null;
+  number: number | null;
   errorMessage: string | null;
 } {
   if (typeof graphqlBody !== "object" || graphqlBody === null) {
-    return { url: null, errorMessage: "GitHub response was not a JSON object." };
+    return { url: null, number: null, errorMessage: "GitHub response was not a JSON object." };
   }
   const r = graphqlBody as GraphQLDiscussionResponse;
 
@@ -69,19 +72,58 @@ function extractDiscussionUrl(graphqlBody: unknown): {
     const first = r.errors[0];
     return {
       url: null,
+      number: null,
       errorMessage: `GitHub GraphQL error: ${first?.message ?? "unknown"}.`,
     };
   }
 
-  const url = r.data?.createDiscussion?.discussion?.url;
-  if (typeof url === "string" && url.length > 0) {
-    return { url, errorMessage: null };
+  const discussion = r.data?.createDiscussion?.discussion;
+  const url = discussion?.url;
+  const number = discussion?.number;
+  if (typeof url === "string" && url.length > 0 && typeof number === "number") {
+    return { url, number, errorMessage: null };
   }
 
   return {
     url: null,
-    errorMessage: "GitHub response did not contain a discussion URL.",
+    number: null,
+    errorMessage: "GitHub response did not contain a discussion URL/number.",
   };
+}
+
+async function fireEmailRelay(
+  payload: ReturnType<typeof toEmailRelayPayload>,
+  url: string | undefined,
+  apiKey: string | undefined
+): Promise<void> {
+  if (payload === null) return;
+  if (!url || !apiKey) {
+    console.warn("[feedback] email_relay_skipped reason=env_unset");
+    return;
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), EMAIL_RELAY_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-make-apikey": apiKey,
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    if (res.ok) {
+      console.log(`[feedback] email_relay_ok status=${res.status}`);
+    } else {
+      console.error(`[feedback] email_relay_error upstream_status=${res.status}`);
+    }
+  } catch (err) {
+    const reason = (err as Error)?.name === "AbortError" ? "timeout" : "exception";
+    console.error(`[feedback] email_relay_error reason=${reason}`);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export default async function handler(
@@ -158,9 +200,9 @@ export default async function handler(
     }
 
     const githubBody = await upstream.json().catch(() => null);
-    const { url, errorMessage } = extractDiscussionUrl(githubBody);
+    const { url, number, errorMessage } = extractDiscussion(githubBody);
 
-    if (!url) {
+    if (!url || number === null) {
       console.error(
         `[feedback] featurebase_error upstream_status=200_with_errors`
       );
@@ -172,6 +214,17 @@ export default async function handler(
       );
       return;
     }
+
+    // Discussion landed. Now fire the email relay if applicable. We await
+    // it (with a short timeout) so failures land in this request's logs, but
+    // we never fail the response on relay errors — the Discussion is the
+    // durable record; the email relay is a notification convenience.
+    const relayPayload = toEmailRelayPayload(result, { url, number });
+    await fireEmailRelay(
+      relayPayload,
+      process.env.MAKE_WEBHOOK_URL,
+      process.env.MAKE_API_KEY
+    );
 
     console.log(`[feedback] ok status=201 post_url=${url}`);
     success(res, url);

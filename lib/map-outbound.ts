@@ -51,11 +51,12 @@ function categoryIdForType(type: FeedbackType, env: OutboundEnv): string {
 
 function buildDiscussionBody(body: ValidatedBody): string {
   // The agent ships HTML in `content`. GitHub's Markdown engine accepts a
-  // safe subset of HTML inline, so we pass it through. Email goes at the
-  // bottom inside an HTML comment-style footer so the operator can see it
-  // without it being prominent in the rendered Discussion.
+  // safe subset of HTML inline, so we pass it through. The footer signals
+  // whether a reply-to address is available WITHOUT leaking the address
+  // itself — the email goes via the Make-webhook private channel (see
+  // lib/email-relay.ts), never into the public Discussion body.
   const trailer = body.email
-    ? `\n\n---\n\n_Reply-to: ${body.email}_`
+    ? `\n\n---\n\n_A reply-to address was provided; available via the operator's inbox._`
     : `\n\n---\n\n_Submitted anonymously._`;
   return body.content + trailer;
 }
