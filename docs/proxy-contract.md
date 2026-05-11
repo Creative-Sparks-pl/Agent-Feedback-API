@@ -2,7 +2,7 @@
 
 This is the external contract for the Agent-Feedback-API proxy: the request shape from the agent, the proxy's response shape, error codes, env vars, and the outbound mapping to GitHub Discussions.
 
-**Ownership.** The agent-facing request shape (request body + Authorization header + response shape on success) is owned upstream at `d:\Dev\Markdown-Agents\agents\ux-designer\projects\2026-05-07-feedback-intake-workflow\plans\2026-05-07-feedback-intake-design.md` §10 — do not change those fields here without changing upstream first. The **outbound mapping to GitHub Discussions** is owned in this repo (tracked by FIN-008 — platform pivot from Featurebase due to Free-plan API paywall).
+**Ownership.** This file is the living contract for both the agent-facing request shape and the outbound mapping to GitHub Discussions. Any change to the request body / Authorization header / success response shape must also be mirrored in the consuming agents (currently `ux-designer` at `references/feedback-intake.md`). The historical design rationale lives in `d:\Dev\Markdown-Agents\agents\ux-designer\projects\archive\2026-05-07-feedback-intake-workflow\plans\2026-05-07-feedback-intake-design.md` — that doc is a release-time snapshot of the v1 design (3-type contract; FIN-008 captures the platform pivot from Featurebase), not the current contract.
 
 ---
 
