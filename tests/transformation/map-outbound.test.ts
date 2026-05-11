@@ -58,12 +58,16 @@ test("type Question routes to categoryIdQuestion", () => {
   assert.equal(req.variables.input.categoryId, ENV.categoryIdQuestion);
 });
 
-test("title is prefixed with [UXD Feedback] for operator scannability", () => {
+test("Discussion title is the user's title verbatim (no [UXD Feedback] prefix — that lives only in the email subject)", () => {
   const req = toGraphQLRequest(
     bodyOf({ title: "Original title with no prefix" }),
     ENV
   );
-  assert.equal(req.variables.input.title, "[UXD Feedback] Original title with no prefix");
+  assert.equal(req.variables.input.title, "Original title with no prefix");
+  assert.ok(
+    !req.variables.input.title.includes("[UXD"),
+    "Discussion title must not carry the agent-identifier prefix"
+  );
 });
 
 test("content appears at the top of the discussion body", () => {
