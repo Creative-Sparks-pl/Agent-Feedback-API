@@ -156,12 +156,14 @@ export default async function handler(
     const categoryIdBug = process.env.GITHUB_CAT_BUG_ID;
     const categoryIdFeature = process.env.GITHUB_CAT_FEATURE_ID;
     const categoryIdFeedback = process.env.GITHUB_CAT_FEEDBACK_ID;
+    const categoryIdQuestion = process.env.GITHUB_CAT_QUESTION_ID;
     if (
       !githubToken ||
       !repoId ||
       !categoryIdBug ||
       !categoryIdFeature ||
-      !categoryIdFeedback
+      !categoryIdFeedback ||
+      !categoryIdQuestion
     ) {
       console.error("[feedback] internal_error message=missing_env");
       failure(res, 500, "internal_error", "Server is misconfigured.");
@@ -174,6 +176,7 @@ export default async function handler(
       categoryIdBug,
       categoryIdFeature,
       categoryIdFeedback,
+      categoryIdQuestion,
     });
     const upstream = await fetch(GITHUB_GRAPHQL_URL, {
       method: "POST",

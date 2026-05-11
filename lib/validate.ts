@@ -1,7 +1,7 @@
 // Pure request validator for the feedback proxy. The handler in
 // api/feedback.ts is the only place that performs I/O.
 
-export type FeedbackType = "Bug" | "Feature request" | "Feedback";
+export type FeedbackType = "Bug" | "Feature request" | "Feedback" | "Question";
 
 export interface ValidatedBody {
   type: FeedbackType;
@@ -32,6 +32,7 @@ const VALID_TYPES: ReadonlySet<string> = new Set([
   "Bug",
   "Feature request",
   "Feedback",
+  "Question",
 ]);
 
 // Single-line shape check — local@domain.tld with no spaces. Featurebase does
@@ -77,7 +78,8 @@ export function validate(req: ValidateInput): ValidationResult {
   if (typeof type !== "string" || !VALID_TYPES.has(type)) {
     return {
       error: "validation_error",
-      message: 'Field "type" must be one of: Bug, Feature request, Feedback.',
+      message:
+        'Field "type" must be one of: Bug, Feature request, Feedback, Question.',
     };
   }
 

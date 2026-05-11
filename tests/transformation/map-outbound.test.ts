@@ -11,6 +11,7 @@ const ENV = {
   categoryIdBug: "CAT_BUG_ID",
   categoryIdFeature: "CAT_FEATURE_ID",
   categoryIdFeedback: "CAT_FEEDBACK_ID",
+  categoryIdQuestion: "CAT_QUESTION_ID",
 };
 
 function bodyOf(overrides: Partial<ValidatedBody> = {}): ValidatedBody {
@@ -50,6 +51,11 @@ test("type Feature request routes to categoryIdFeature", () => {
 test("type Feedback routes to categoryIdFeedback", () => {
   const req = toGraphQLRequest(bodyOf({ type: "Feedback" }), ENV);
   assert.equal(req.variables.input.categoryId, ENV.categoryIdFeedback);
+});
+
+test("type Question routes to categoryIdQuestion", () => {
+  const req = toGraphQLRequest(bodyOf({ type: "Question" }), ENV);
+  assert.equal(req.variables.input.categoryId, ENV.categoryIdQuestion);
 });
 
 test("title is prefixed with [UXD Feedback] for operator scannability", () => {

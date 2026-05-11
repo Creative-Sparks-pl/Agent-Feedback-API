@@ -34,8 +34,9 @@ GitHub repo → Discussions tab → "Discussions categories" pencil icon → cre
 - **Bug reports** (Format: Discussion. Description: "Something not working.")
 - **Feature requests** (Format: Discussion. Description: "An idea or improvement.")
 - **Feedback** (Format: Discussion. Description: "General reflections.")
+- **Q&A** (Format: Q&A. Description: "Questions for the operator.") — the built-in Q&A category that ships with every Discussions-enabled repo; keep it (do not delete) since the `Question` feedback type routes here.
 
-You can delete the default categories (Q&A, Show and tell, etc.) or leave them — the proxy only writes into the three above.
+You can delete the other default categories (Show and tell, Announcements, etc.) — the proxy only writes into the four above.
 
 ### 1.4 Generate a fine-grained PAT
 
@@ -88,6 +89,7 @@ The response lists every category with its `id` and `name`. Map them by name:
 - Category named **Bug reports** → `GITHUB_CAT_BUG_ID`
 - Category named **Feature requests** → `GITHUB_CAT_FEATURE_ID`
 - Category named **Feedback** → `GITHUB_CAT_FEEDBACK_ID`
+- Category named **Q&A** → `GITHUB_CAT_QUESTION_ID`
 
 ---
 
@@ -95,13 +97,14 @@ The response lists every category with its `id` and `name`. Map them by name:
 
 1. **Create the project.** https://vercel.com/new → import `Creative-Sparks-pl/Agent-Feedback-API` from GitHub.
 2. **Confirm framework preset.** Vercel auto-detects "Other" — leave the build command empty.
-3. **Set environment variables.** Vercel project Settings → Environment Variables. Add **all six** keys for both `Production` and `Preview`:
+3. **Set environment variables.** Vercel project Settings → Environment Variables. Add **all seven** keys for both `Production` and `Preview`:
    - `FEEDBACK_BUNDLE_TOKEN` — generate with `openssl rand -hex 32` (any sufficiently long random string).
    - `GITHUB_TOKEN` — the PAT from §1.4.
    - `GITHUB_REPO_ID` — from §1.5.
    - `GITHUB_CAT_BUG_ID` — from §1.5.
    - `GITHUB_CAT_FEATURE_ID` — from §1.5.
    - `GITHUB_CAT_FEEDBACK_ID` — from §1.5.
+   - `GITHUB_CAT_QUESTION_ID` — from §1.5.
 4. **Trigger first deploy.** Push to `main` (or click "Deploy" in the Vercel dashboard). Vercel auto-deploys subsequent pushes to `main` thereafter.
 5. **Capture the production URL.** Vercel assigns a URL like `https://agent-feedback-api-<hash>.vercel.app` (or your custom domain if attached). Record it in §5 below.
 

@@ -104,6 +104,15 @@ test("type Feedback is accepted", () => {
   assert.equal(result.type, "Feedback");
 });
 
+test("type Question is accepted", () => {
+  const result = validate({
+    headers: authHeaders(),
+    body: goodBody({ type: "Question" }),
+  });
+  assert.ok(!isValidationFailure(result));
+  assert.equal(result.type, "Question");
+});
+
 test("empty title returns validation_error", () => {
   const result = validate({
     headers: authHeaders(),

@@ -17,7 +17,7 @@ Authorization: Bearer <BUNDLE_TOKEN>
 Content-Type: application/json
 
 {
-  "type": "Bug" | "Feature request" | "Feedback",
+  "type": "Bug" | "Feature request" | "Feedback" | "Question",
   "title": "Wireframe export drops trailing whitespace",
   "content": "<p>When I export a wireframe via Download MD button, trailing whitespace in copy fields gets stripped.</p>",
   "email": "user@example.com" | null
@@ -51,7 +51,7 @@ Method gate: any HTTP method other than `POST` returns 405.
 
 ## Server-side environment variables
 
-The proxy reads these six required values from `process.env` at request time. None of them ship in any agent bundle.
+The proxy reads these seven required values from `process.env` at request time. None of them ship in any agent bundle.
 
 ```
 FEEDBACK_BUNDLE_TOKEN     # Static shared token; matched against incoming Authorization header
@@ -61,6 +61,7 @@ GITHUB_REPO_ID            # GraphQL global node ID of the operator's feedback re
 GITHUB_CAT_BUG_ID         # GraphQL ID of the "Bug reports" Discussion category
 GITHUB_CAT_FEATURE_ID     # GraphQL ID of the "Feature requests" Discussion category
 GITHUB_CAT_FEEDBACK_ID    # GraphQL ID of the "Feedback" Discussion category
+GITHUB_CAT_QUESTION_ID    # GraphQL ID of the "Q&A" Discussion category (Q&A format; Question type routes here)
 ```
 
 See `docs/operations.md` §1 for the `gh api graphql` queries that fetch the repo + category IDs from GitHub.
@@ -69,7 +70,7 @@ See `docs/operations.md` §1 for the `gh api graphql` queries that fetch the rep
 
 ## Outbound to GitHub Discussions
 
-The proxy converts the agent's slim payload into a GraphQL `createDiscussion` mutation against `https://api.github.com/graphql`. The agent's `type` selects the Discussion category by env-var lookup (1:1 mapping — `Bug` → `GITHUB_CAT_BUG_ID`, `Feature request` → `GITHUB_CAT_FEATURE_ID`, `Feedback` → `GITHUB_CAT_FEEDBACK_ID`).
+The proxy converts the agent's slim payload into a GraphQL `createDiscussion` mutation against `https://api.github.com/graphql`. The agent's `type` selects the Discussion category by env-var lookup (1:1 mapping — `Bug` → `GITHUB_CAT_BUG_ID`, `Feature request` → `GITHUB_CAT_FEATURE_ID`, `Feedback` → `GITHUB_CAT_FEEDBACK_ID`, `Question` → `GITHUB_CAT_QUESTION_ID`). The Question type targets the repo's built-in "Q&A" category, which is the only category whose format marks individual replies as answers — fits a question-shaped intent better than the discussion-format categories.
 
 **GraphQL request body:**
 

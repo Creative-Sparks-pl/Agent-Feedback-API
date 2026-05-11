@@ -14,6 +14,7 @@ export interface OutboundEnv {
   categoryIdBug: string;
   categoryIdFeature: string;
   categoryIdFeedback: string;
+  categoryIdQuestion: string;
 }
 
 export interface GraphQLRequest {
@@ -46,6 +47,8 @@ function categoryIdForType(type: FeedbackType, env: OutboundEnv): string {
       return env.categoryIdFeature;
     case "Feedback":
       return env.categoryIdFeedback;
+    case "Question":
+      return env.categoryIdQuestion;
   }
 }
 
